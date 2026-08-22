@@ -1,24 +1,22 @@
-const express = require('express');
+const express = require("express");
+const pool = require("./db");
 
 const app = express();
 
-app.get("/",(req,res)=>{
-    res.send("Game Release API is running");
+app.get("/", (req, res) => {
+    res.send("Game Release API is running!");
 });
 
-app.get("/games",(req,res)=>{
-    res.json([
-        {
-            id: 1,
-            title: "Resident Evil 4",
-        },
-        {
-            id: 2,
-            title: "Sonic Adventure 2"
-        }
-    ]);
+app.get("/games", async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM games");
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Database query failed" });
+    }
 });
 
-app.listen(3000, ()=>{
-    console.log("Server is running on http://localhost:3000");
+app.listen(3000, () => {
+    console.log("Server running on http://localhost:3000");
 });
