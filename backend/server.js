@@ -1,7 +1,9 @@
+const cors = require("cors");
 const express = require("express");
 const pool = require("./db");
 
 const app = express();
+app.use(cors());
 
 app.get("/", (req, res) => {
     res.send("Game Release API is running!");
