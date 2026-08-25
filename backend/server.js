@@ -9,7 +9,30 @@ app.get("/", (req, res) => {
 
 app.get("/games", async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM games");
+        const { search } = req.query;
+
+        let result;
+
+        if (search) {
+            result = await pool.query(
+                `
+                SELECT *
+                FROM games
+                WHERE title ILIKE $1
+                ORDER BY title ASC;
+                `,
+                [`%${search}%`]
+            );
+        } else {
+            result = await pool.query(
+                `
+                SELECT *
+                FROM games
+                ORDER BY title ASC;
+                `
+            );
+        }
+
         res.json(result.rows);
     } catch (error) {
         console.error(error);
