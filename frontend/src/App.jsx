@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 
 function App() {
-    const [games, setGames] = useState([]);
-    const [selectedGame, setSelectedGame] = useState(null);
-    const [releases, setReleases] = useState([]);
-    const [search, setSearch] = useState("");
+    const [games, setGames] = useState([]); // State to hold the list of games fetched from the backend
+    const [selectedGame, setSelectedGame] = useState(null); // State to hold the currently selected game
+    const [releases, setReleases] = useState([]); // State to hold the list of releases for the selected game
+    const [search, setSearch] = useState(""); // State to hold the search term entered by the user
 
-    useEffect(() => {
+    useEffect(() => { // Fetch games from the backend whenever the search term changes
         const url = search
             ? `http://localhost:3000/games?search=${encodeURIComponent(search)}`
             : "http://localhost:3000/games";
@@ -16,12 +16,12 @@ function App() {
             .then(data => setGames(data));
     }, [search]);
 
-    useEffect(() => {
+    useEffect(() => { 
     if (!selectedGame) {
         return;
     }
 
-    fetch(`http://localhost:3000/games/${selectedGame.id}/releases`)
+    fetch(`http://localhost:3000/games/${selectedGame.id}/releases`) // Fetch releases for the selected game whenever it changes
         .then(response => response.json())
         .then(data => setReleases(data));
 }, [selectedGame]);

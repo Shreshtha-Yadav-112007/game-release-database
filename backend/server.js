@@ -23,7 +23,7 @@ app.get("/games", async (req, res) => {
                 WHERE title ILIKE $1
                 ORDER BY title ASC;
                 `,
-                [`%${search}%`]
+                [`%${search}%`] //This is called a parameterized query, which helps prevent SQL injection attacks by safely inserting the search term into the query.
             );
         } else {
             result = await pool.query(
@@ -63,7 +63,7 @@ app.get("/games/:id/releases", async (req, res) => {
             WHERE r.game_id = $1
             ORDER BY r.release_date ASC;
             `,
-            [id]
+            [id] //Again, parameterized query to safely insert the game ID into the query.
         );
 
         res.json(result.rows);
