@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 function App() {
     const [games, setGames] = useState([]);
+    const [selectedGame, setSelectedGame] = useState(null);
+    const [releases, setReleases] = useState([]);
     const [search, setSearch] = useState("");
 
     useEffect(() => {
@@ -14,6 +16,16 @@ function App() {
             .then(data => setGames(data));
     }, [search]);
 
+    useEffect(() => {
+    if (!selectedGame) {
+        return;
+    }
+
+    fetch(`http://localhost:3000/games/${selectedGame.id}/releases`)
+        .then(response => response.json())
+        .then(data => setReleases(data));
+}, [selectedGame]);
+
     return (
         <div>
             <h1>Game Release Database</h1>
@@ -25,13 +37,30 @@ function App() {
                 onChange={(event) => setSearch(event.target.value)}
             />
 
-            <ul>
+            <ul>    
                 {games.map(game => (
-                    <li key={game.id}>
+                    <li
+                        key={game.id}
+                        onClick={() => setSelectedGame(game)}
+                    >
                         {game.title}
                     </li>
                 ))}
             </ul>
+            
+            {selectedGame && (
+                <div>
+                    <h2>{selectedGame.title}</h2>
+                    <h3>Releases</h3>
+                    <ul>
+                        {releases.map(release => (
+                            <li key={release.id}>
+                                {release.platform} - {release.region} - {release.release_format} - {release.release_date.slice(0, 10)}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
