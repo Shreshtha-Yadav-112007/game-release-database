@@ -1,6 +1,6 @@
-Game Release Database — High-Level Design
+***Game Release Database — High-Level Design***
 
-1. System Overview:
+**1. System Overview:**
 
 The Game Release Database is a full-stack web application that allows users to search for video games and view their release information across different platforms, regions, and release formats.
 
@@ -16,7 +16,7 @@ The backend provides a REST API that processes requests from the frontend and co
 
 The database stores the game's release information and maintains the relationships between games, releases, platforms, and regions.
 
-2. System Architecture:
+**2. System Architecture:**
 
 The system follows a simple client-server architecture.
 
@@ -38,7 +38,7 @@ The overall communication flow is:
 
 This architecture keeps the user interface, application logic, and data storage separated from one another.
 
-3. Frontend Layer:
+**3. Frontend Layer:**
 
 Technology:
 
@@ -62,7 +62,7 @@ The frontend does not directly communicate with PostgreSQL.
 
 All database-related operations are performed through the backend API.
 
-4. Backend Layer:
+**4. Backend Layer:**
 
 Technology:
 
@@ -89,7 +89,7 @@ Its responsibilities include:
 
 The backend exposes REST API endpoints that the frontend can use to retrieve information.
 
-5. Database Layer:
+**5. Database Layer:**
 
 Technology:
 
@@ -112,7 +112,7 @@ A game can have multiple releases, while each release is associated with a parti
 
 This structure allows the system to represent multiple releases of the same game without duplicating the game's basic information.
 
-6. API Layer:
+**6. API Layer:**
 
 The backend exposes a REST-style API for communication between the frontend and backend.
 
@@ -140,7 +140,7 @@ The API acts as the boundary between the frontend and backend.
 
 This means the frontend does not need to know how the database is structured internally.
 
-7. Data Flow:
+**7. Data Flow:**
 
 Game Search:
 
@@ -166,7 +166,7 @@ When a user selects a game:
 6. Express returns the releases as JSON.
 7. React displays the release information.
 
-8. Component Responsibilities:
+**8. Component Responsibilities:**
 
 Frontend:
 
@@ -204,7 +204,7 @@ It is responsible for:
 - Data retrieval
 - Maintaining data consistency
 
-9. Database Architecture:
+**9. Database Architecture:**
 
 The database is structured around the concept of a game having multiple releases.
 
@@ -231,7 +231,7 @@ For example, a single game may have separate records for:
 
 The detailed database structure is documented separately in the LLD.
 
-10. Communication Between Layers:
+**10. Communication Between Layers:**
 
 The frontend and backend communicate through HTTP requests.
 
@@ -247,7 +247,7 @@ This separation provides several benefits:
 - The frontend can be changed without redesigning the database.
 - The database can be changed without requiring direct frontend access.
 
-11. Development Environment:
+**11. Development Environment:**
 
 During development, the application runs as separate frontend and backend processes.
 
@@ -265,7 +265,7 @@ The current development environment therefore consists of:
 
 CORS is configured on the backend to allow communication between the frontend and backend during local development.
 
-12. Security Architecture:
+**12. Security Architecture:**
 
 The frontend does not directly connect to PostgreSQL.
 
@@ -277,7 +277,7 @@ This helps protect the database from SQL injection.
 
 Additional security mechanisms such as authentication, authorization, rate limiting, HTTPS configuration, and production security policies are not currently required for the MVP.
 
-13. Scalability Considerations:
+**13. Scalability Considerations:**
 
 The current architecture is intentionally simple because the project is currently focused on the MVP.
 
@@ -296,7 +296,7 @@ Potential improvements include:
 
 These improvements are not currently required for the MVP.
 
-14. Current System Limitations:
+**14. Current System Limitations:**
 
 The current system has several limitations:
 
@@ -312,7 +312,7 @@ The current system has several limitations:
 
 These limitations can be addressed in future iterations.
 
-15. Future Architecture:
+**15. Future Architecture:**
 
 The current architecture is designed to provide a foundation for future features.
 
@@ -331,7 +331,7 @@ Potential future additions include:
 
 These features can be added without fundamentally changing the three-layer architecture of the application.
 
-16. Design Principles:
+**16. Design Principles:**
 
 The current system follows several basic design principles:
 
@@ -351,7 +351,7 @@ Extensibility:
 
 The database and API are structured so that additional functionality can be added as the project develops.
 
-17. Architecture Summary:
+**17. Architecture Summary:**
 
 The current Game Release Database uses a three-layer architecture consisting of:
 
