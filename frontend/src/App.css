@@ -54,6 +54,25 @@
     transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
       scale(0.8);
   }
+  @media (max-width: 1024px) {
+    .base {
+      width: 140px;
+    }
+
+    .framework {
+      top: 28px;
+      height: 24px;
+      transform: perspective(2000px) rotateZ(300deg) rotateX(44deg)
+        rotateY(39deg) scale(1.2);
+    }
+
+    .vite {
+      top: 88px;
+      height: 22px;
+      transform: perspective(2000px) rotateZ(300deg) rotateX(40deg)
+        rotateY(39deg) scale(0.7);
+    }
+  }
 }
 
 #center {
@@ -167,7 +186,7 @@
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: -4.5px;
     border: 5px solid transparent;
