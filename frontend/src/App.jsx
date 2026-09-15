@@ -4,11 +4,30 @@ import { Routes, Route, useNavigate, useParams } from "react-router-dom";
 function GameDetails() {
   const { id } = useParams();
   const [releases, setReleases] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetch(`http://localhost:3000/games/${id}/releases`)
-      .then((response) => response.json())
-      .then((data) => setReleases(data));
+      .then(async (response) => {
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch releases");
+        }
+
+        return data;
+      })
+      .then((data) => {
+        setReleases(data);
+      })
+      .catch((error) => {
+        console.error(error);
+        setError(error.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [id]);
 
   return (
@@ -16,6 +35,10 @@ function GameDetails() {
       <h2>Game ID: {id}</h2>
 
       <h3>Releases</h3>
+
+      {loading && <p>Loading releases...</p>}
+      
+      {error && <p>Error: {error}</p>}
 
       <ul>
         {releases.map((release) => (
@@ -32,17 +55,36 @@ function GameDetails() {
 function App() {
   const [games, setGames] = useState([]); // State to hold the list of games fetched from the backend
   const [search, setSearch] = useState(""); // State to hold the search term entered by the user
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch games from the backend whenever the search term changes
     const url = search
       ? `http://localhost:3000/games?search=${encodeURIComponent(search)}`
       : "http://localhost:3000/games";
 
     fetch(url)
-      .then((response) => response.json())
-      .then((data) => setGames(data));
+      .then(async (response) => {
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch games");
+        }
+
+        return data;
+      })
+      .then((data) => {
+        setGames(data);
+      })
+      .catch((error) => {
+        console.error(error);
+        setError(error.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [search]);
 
   return (
@@ -57,8 +99,16 @@ function App() {
               type="text"
               placeholder="Search for a game..."
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setError(null);
+                setLoading(true);
+                setSearch(event.target.value);
+              }}
             />
+
+            {loading && <p>Loading games...</p>}
+
+            {error && <p>Error: {error}</p>}
 
             <ul>
               {games.map((game) => (
