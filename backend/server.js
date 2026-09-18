@@ -1,14 +1,19 @@
 const cors = require("cors");
 const express = require("express");
 const pool = require("./db");
+const connectMongoDB = require("./mongo");
 
 const app = express();
+
+let mongoDb;
 
 app.use(
     cors({
         origin: "http://localhost:5173"
     })
 );
+
+app.use(express.json());
 
 app.get("/", (req, res) => {
     res.send("Game Release API is running!");
@@ -78,6 +83,180 @@ app.get("/games/:id/releases", async (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    console.log("Server running on http://localhost:3000");
+app.post("/games/:id/metadata", async (req, res) => {
+    try {
+        const gameId = Number(req.params.id);
+
+        if (!Number.isInteger(gameId)) {
+            return res.status(400).json({ error: "Invalid game ID" });
+        }
+
+        const {
+            title,
+            developer,
+            publisher,
+            genres,
+            aliases,
+            notes,
+            sources
+        } = req.body;
+
+        const metadata = {
+            gameId,
+            title,
+            developer,
+            publisher,
+            genres,
+            aliases,
+            notes,
+            sources,
+            updatedAt: new Date()
+        };
+
+        const result = await mongoDb
+            .collection("game_metadata")
+            .insertOne(metadata);
+
+        res.status(201).json({
+            message: "Game metadata created",
+            id: result.insertedId
+        });
+    } catch (error) {
+        console.error(error);
+
+        if (error.code === 11000) {
+            return res.status(409).json({
+                error: "Metadata already exists for this game"
+            });
+        }
+
+        res.status(400).json({
+            error: "Failed to create game metadata"
+        });
+    }
 });
+
+app.get("/games/:id/metadata", async (req, res) => {
+    try {
+        const gameId = Number(req.params.id);
+
+        if (!Number.isInteger(gameId)) {
+            return res.status(400).json({ error: "Invalid game ID" });
+        }
+
+        const metadata = await mongoDb
+            .collection("game_metadata")
+            .findOne({ gameId });
+
+        if (!metadata) {
+            return res.status(404).json({
+                error: "Game metadata not found"
+            });
+        }
+
+        res.status(200).json(metadata);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            error: "Failed to fetch game metadata"
+        });
+    }
+});
+
+app.put("/games/:id/metadata", async (req, res) => {
+    try {
+        const gameId = Number(req.params.id);
+
+        if (!Number.isInteger(gameId)) {
+            return res.status(400).json({ error: "Invalid game ID" });
+        }
+
+        const {
+            title,
+            developer,
+            publisher,
+            genres,
+            aliases,
+            notes,
+            sources
+        } = req.body;
+
+        const result = await mongoDb
+            .collection("game_metadata")
+            .updateOne(
+                { gameId },
+                {
+                    $set: {
+                        title,
+                        developer,
+                        publisher,
+                        genres,
+                        aliases,
+                        notes,
+                        sources,
+                        updatedAt: new Date()
+                    }
+                }
+            );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                error: "Game metadata not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Game metadata updated"
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(400).json({
+            error: "Failed to update game metadata"
+        });
+    }
+});
+
+app.delete("/games/:id/metadata", async (req, res) => {
+    try {
+        const gameId = Number(req.params.id);
+
+        if (!Number.isInteger(gameId)) {
+            return res.status(400).json({ error: "Invalid game ID" });
+        }
+
+        const result = await mongoDb
+            .collection("game_metadata")
+            .deleteOne({ gameId });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                error: "Game metadata not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Game metadata deleted"
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to delete game metadata"
+        });
+    }
+});
+
+async function startServer() {
+    try {
+        mongoDb = await connectMongoDB();
+
+        app.listen(3000, () => {
+            console.log("Server running on port 3000");
+        });
+    } catch (error) {
+        console.error("MongoDB connection failed:", error);
+    }
+}
+
+startServer();
