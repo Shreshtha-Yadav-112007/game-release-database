@@ -2,6 +2,10 @@ const cors = require("cors");
 const express = require("express");
 const pool = require("./db");
 const connectMongoDB = require("./mongo");
+const {
+    buildReleaseSummaryPrompt,
+    generateStructuredReleaseSummary
+} = require("./gemini");
 
 const app = express();
 
@@ -80,6 +84,101 @@ app.get("/games/:id/releases", async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Database query failed" });
+    }
+});
+
+app.post("/games/:id/ai-summary", async (req, res) => {
+    try {
+        const gameId = Number(req.params.id);
+
+        if (!Number.isInteger(gameId)) {
+            return res.status(400).json({
+                error: "Invalid game ID"
+            });
+        }
+
+        const metadata = await mongoDb
+            .collection("game_metadata")
+            .findOne({ gameId });
+
+        if (!metadata) {
+            return res.status(404).json({
+                error: "Game metadata not found"
+            });
+        }
+
+        const result = await pool.query(
+            `
+            SELECT
+                g.title,
+                p.name AS platform,
+                reg.name AS region,
+                r.release_format,
+                r.release_date,
+                r.notes
+            FROM releases r
+            JOIN games g ON r.game_id = g.id
+            JOIN platforms p ON r.platform_id = p.id
+            JOIN regions reg ON r.region_id = reg.id
+            WHERE r.game_id = $1
+            ORDER BY r.release_date ASC;
+            `,
+            [gameId] // Parameterized query to safely insert the game ID into the query.
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Game releases not found"
+            });
+        }
+
+        const gameTitle = result.rows[0].title;
+
+        const releases = result.rows.map((release) => ({
+            platform: release.platform,
+            region: release.region,
+            release_format: release.release_format,
+            release_date: release.release_date,
+            notes: release.notes
+        }));
+
+        const prompt = buildReleaseSummaryPrompt(
+            gameTitle,
+            releases
+        );
+
+        const summary =
+            await generateStructuredReleaseSummary(prompt);
+
+        const metadataUpdate = await mongoDb
+            .collection("game_metadata")
+            .updateOne(
+                { gameId },
+                {
+                    $set: {
+                        aiSummary: summary,
+                        updatedAt: new Date()
+                    }
+                }
+            );
+
+        if (metadataUpdate.matchedCount === 0) {
+            return res.status(404).json({
+                error: "Game metadata not found"
+            });
+        }
+
+        res.status(200).json({
+            gameId,
+            title: gameTitle,
+            summary
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to generate AI release summary"
+        });
     }
 });
 
