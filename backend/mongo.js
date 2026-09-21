@@ -68,6 +68,49 @@ const gameMetadataSchema = {
                     }
                 }
             },
+            aiSummary: {
+                bsonType: "object",
+                required: [
+                    "summary",
+                    "releaseCount",
+                    "platforms",
+                    "regions",
+                    "releaseFormats",
+                    "notablePatterns"
+                ],
+                properties: {
+                    summary: {
+                        bsonType: "string"
+                    },
+                    releaseCount: {
+                        bsonType: ["int", "long"]
+                    },
+                    platforms: {
+                        bsonType: "array",
+                        items: {
+                            bsonType: "string"
+                        }
+                    },
+                    regions: {
+                        bsonType: "array",
+                        items: {
+                            bsonType: "string"
+                        }
+                    },
+                    releaseFormats: {
+                        bsonType: "array",
+                        items: {
+                            bsonType: "string"
+                        }
+                    },
+                    notablePatterns: {
+                        bsonType: "array",
+                        items: {
+                            bsonType: "string"
+                        }
+                    }
+                }
+            },
             updatedAt: {
                 bsonType: "date"
             }

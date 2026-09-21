@@ -7,6 +7,10 @@ function GameDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [aiSummary, setAiSummary] = useState(null); //Stores Gemini's structured response
+  const [aiLoading, setAiLoading] = useState(false); //Tells the UI that Gemini is generating
+  const [aiError, setAiError] = useState(null); //Stores an AI request error
+
   useEffect(() => {
     fetch(`http://localhost:3000/games/${id}/releases`)
       .then(async (response) => {
@@ -30,6 +34,33 @@ function GameDetails() {
       });
   }, [id]);
 
+  const generateAISummary = async () => {
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/games/${id}/ai-summary`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate AI summary");
+      }
+
+      setAiSummary(data.summary);
+    } catch (error) {
+      console.error(error);
+      setAiError(error.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
     <div>
       <h2>Game ID: {id}</h2>
@@ -37,8 +68,49 @@ function GameDetails() {
       <h3>Releases</h3>
 
       {loading && <p>Loading releases...</p>}
-      
+
       {error && <p>Error: {error}</p>}
+
+      <button onClick={generateAISummary} disabled={aiLoading}>
+        {aiLoading ? "Generating AI Summary..." : "Generate AI Release Summary"}
+      </button>
+
+      {aiError && <p>Error: {aiError}</p>}
+
+      {aiSummary && (
+        <div>
+          <h3>AI Release Summary</h3>
+
+          <p>{aiSummary.summary}</p>
+
+          <p>
+            <strong>Total releases:</strong> {aiSummary.releaseCount}
+          </p>
+
+          <p>
+            <strong>Platforms:</strong>{" "}
+            {aiSummary.platforms.join(", ")}
+          </p>
+
+          <p>
+            <strong>Regions:</strong>{" "}
+            {aiSummary.regions.join(", ")}
+          </p>
+
+          <p>
+            <strong>Release formats:</strong>{" "}
+            {aiSummary.releaseFormats.join(", ")}
+          </p>
+
+          <h4>Notable Patterns</h4>
+
+          <ul>
+            {aiSummary.notablePatterns.map((pattern, index) => (
+              <li key={index}>{pattern}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <ul>
         {releases.map((release) => (
