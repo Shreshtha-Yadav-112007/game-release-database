@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useParams } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 function GameDetails() {
   const { id } = useParams();
   const [releases, setReleases] = useState([]);
@@ -12,7 +14,7 @@ function GameDetails() {
   const [aiError, setAiError] = useState(null); //Stores an AI request error
 
   useEffect(() => {
-    fetch(`http://localhost:3000/games/${id}/releases`)
+    fetch(`${API_URL}/games/${id}/releases`)
       .then(async (response) => {
         const data = await response.json();
 
@@ -40,7 +42,7 @@ function GameDetails() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/games/${id}/ai-summary`,
+        `${API_URL}/games/${id}/ai-summary`,
         {
           method: "POST",
         }
@@ -134,8 +136,8 @@ function App() {
 
   useEffect(() => {
     const url = search
-      ? `http://localhost:3000/games?search=${encodeURIComponent(search)}`
-      : "http://localhost:3000/games";
+      ? `${API_URL}/games?search=${encodeURIComponent(search)}`
+      : `${API_URL}/games`;
 
     fetch(url)
       .then(async (response) => {
