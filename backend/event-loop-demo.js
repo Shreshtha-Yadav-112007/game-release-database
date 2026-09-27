@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-console.log("1. Synchronous code starts");
+console.log("Synchronous code starts");
 
 fs.readFile(__filename, "utf8", (error, data) => {
     if (error) {
@@ -8,15 +8,15 @@ fs.readFile(__filename, "utf8", (error, data) => {
         return;
     }
 
-    console.log("4. Asynchronous I/O callback completed");
+    console.log("Asynchronous I/O callback completed");
 });
 
 Promise.resolve().then(() => {
-    console.log("3. Promise microtask executed");
+    console.log("Promise microtask executed");
 });
 
 setTimeout(() => {
-    console.log("5. Timer callback executed");
+    console.log("Timer callback executed");
 }, 0);
 
-console.log("2. Synchronous code ends");
+console.log("Synchronous code ends");
