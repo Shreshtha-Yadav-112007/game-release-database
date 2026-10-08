@@ -1,122 +1,106 @@
 Game Release Database — High-Level Design
 1. System Overview
-
-The Game Release Database is a full-stack web application that allows users to search for video games and view their release information across different platforms, regions, and release formats.
-
-The system is divided into three primary layers:
-
-Frontend
-Backend
-Database
-
-The frontend provides the user interface and handles user interactions.
-
-The backend provides a REST-style API that processes requests from the frontend and communicates with PostgreSQL.
-
-The database stores games, releases, platforms, regions, and their relationships.
-
-The overall architecture follows a simple client-server model with a separate persistent data layer.
-
+The Game Release Database is a full-stack web application that allows users to search for video games, view release information across platforms and regions, and generate an AI-based summary of a game's release history.
+The system is composed of five major components:
+- Frontend
+- Backend/API
+- PostgreSQL
+- MongoDB
+- External Gemini AI service
+The frontend provides the user interface and handles user interaction. The backend exposes REST-style API endpoints, coordinates database access, and integrates with Gemini. PostgreSQL stores structured game and release data, while MongoDB stores supplementary game metadata and the generated AI summary. Gemini is called by the backend only when an AI release summary is requested.
+The architecture separates presentation, application logic, relational data, document-oriented metadata, and external AI processing responsibilities.
 2. System Architecture
-
-The application follows a three-layer architecture:
-
-┌─────────────────────────────┐
-│       Frontend Layer        │
-│                             │
-│ React 19 + Vite             │
-│ React Router DOM            │
-│ Fetch API                   │
-│ CSS                         │
-└──────────────┬──────────────┘
-               │
-               │ HTTP / JSON
-               ▼
-┌─────────────────────────────┐
-│       Backend Layer         │
-│                             │
-│ Node.js + Express 5         │
-│ CORS                        │
-│ pg Pool                     │
-│ REST API                    │
-└──────────────┬──────────────┘
-               │
-               │ SQL
-               ▼
-┌─────────────────────────────┐
-│        Database Layer       │
-│                             │
-│ PostgreSQL                  │
-│                             │
-│ games                       │
-│ releases                    │
-│ platforms                   │
-│ regions                     │
-└─────────────────────────────┘
-
-The frontend does not communicate directly with PostgreSQL. All database access is performed by the backend.
-
-This separation keeps presentation, application logic, and persistent data responsibilities distinct. The existing HLD correctly identifies this three-layer separation.
-
+The application follows a layered client-server architecture with two database systems and an external AI service:
+┌────────────────────────────────────┐
+│           Frontend Layer           │
+│                                    │
+│ React 19 + Vite                    │
+│ React Router DOM                   │
+│ Fetch API                          │
+│ CSS                                │
+└────────────────┬───────────────────┘
+                 │ HTTP / JSON
+                 ▼
+┌────────────────────────────────────┐
+│           Backend Layer            │
+│                                    │
+│ Node.js + Express 5                │
+│ CORS + JSON middleware             │
+│ PostgreSQL pg Pool                 │
+│ MongoDB driver                     │
+│ Gemini integration                 │
+└──────────────┬───────────────┬─────┘
+               │               │
+             SQL/rows      Documents
+               │               │
+               ▼               ▼
+     ┌────────────────┐ ┌─────────────────┐
+     │   PostgreSQL   │ │    MongoDB      │
+     │                │ │                 │
+     │ games          │ │ game_metadata   │
+     │ platforms      │ │ + aiSummary     │
+     │ regions        │ │                 │
+     │ releases       │ │                 │
+     └────────────────┘ └─────────────────┘
+               
+                    HTTP/API call
+                         │
+                         ▼
+                ┌──────────────────┐
+                │   Gemini API     │
+                │ structured JSON  │
+                └──────────────────┘
+The frontend never communicates directly with either database or with Gemini. All application-level access is routed through the backend.
+PostgreSQL and MongoDB serve different purposes. PostgreSQL is used for normalized game and release data, while MongoDB stores supplementary metadata and the generated AI summary. The two stores are logically connected through the PostgreSQL game ID represented as gameId in MongoDB.
 3. Technology Stack
 Layer	Technology	Purpose
-Frontend	React 19	User interface and state management
-Frontend tooling	Vite	Development/build tooling
-Routing	React Router DOM	Client-side navigation
-HTTP communication	Fetch API	Communication with backend
-Styling	CSS	Layout and responsive styling
-Backend	Node.js	JavaScript runtime
+Frontend	React 19	User interface and component/state management
+Frontend tooling	Vite	Development and production build tooling
+Routing	React Router DOM	Client-side routing for game list and details pages
+HTTP communication	Fetch API	Communication between frontend and backend
+Styling	CSS	Application layout and responsive behavior
+Backend runtime	Node.js	JavaScript runtime
 Backend framework	Express 5	HTTP server and API routing
-Database client	pg	PostgreSQL communication
-Database	PostgreSQL	Persistent relational storage
-Environment configuration	dotenv	Database/environment configuration
-Cross-origin support	CORS	Frontend/backend communication
+PostgreSQL client	pg	Connection pooling and SQL queries
+PostgreSQL	PostgreSQL 16	Structured game and release storage
+MongoDB client	mongodb	Document database access
+MongoDB	MongoDB	Game metadata and AI summary storage
+Environment configuration	dotenv	Loading environment variables
+Cross-origin support	CORS	Restricting browser requests to the configured frontend origin
+AI integration	Google Gemini API	Structured release-summary generation
+Containerization	Docker / Docker Compose	Local multi-service deployment
+Web server	Nginx	Serving the built React frontend in the production-style container
+
+
 4. Frontend Layer
-
 The frontend is implemented using React 19 with Vite.
-
 The main application logic is located in:
-
 frontend/src/App.jsx
-
-The frontend currently contains two main React components:
-
-App
-GameDetails
+The current application contains two main React components:
+- App
+- GameDetails
 Frontend responsibilities
-
 The frontend is responsible for:
-
-displaying the application interface
-accepting game search input
-retrieving games from the backend
-displaying search results
-navigating between game routes
-retrieving release information
-displaying releases
-managing loading states
-managing error states
-
-The frontend uses React Router rather than maintaining a separate selectedGame state.
-
+- displaying the application interface
+- accepting a game title search
+- retrieving games from the backend
+- displaying search results
+- navigating to a selected game's route
+- retrieving and displaying release information
+- requesting an AI release summary
+- displaying the structured AI summary
+- managing loading states
+- managing API error states
+The current frontend does not provide a UI for the metadata CRUD endpoints. Those endpoints are available in the backend for MongoDB data management.
 5. Frontend Routing
-
 The application uses React Router DOM.
+The implemented application routes are:
+Route	Purpose
+/games	Displays the game search interface and game list
+/games/:id	Displays the selected game's releases and AI summary controls
 
-The main routes are:
-
-/games
-/games/:id
-/games
-
-Displays the game search interface and game list.
-
-/games/:id
-
-Displays the releases associated with a particular game.
 
 The navigation flow is:
-
 User clicks game
       ↓
 navigate(`/games/${game.id}`)
@@ -128,146 +112,114 @@ GameDetails
 useParams()
       ↓
 id
-
-This allows the URL itself to represent the currently viewed game.
-
+The URL therefore identifies the selected game and the GameDetails component uses the route parameter to retrieve the relevant release data.
 6. Frontend State Management
-
-The application uses React's useState hook.
-
+The frontend uses React's useState and useEffect hooks for local state and side effects.
 The App component manages:
-
-games
-search
-loading
-error
-
+- games
+- search
+- loading
+- error
 The GameDetails component manages:
-
-releases
-loading
-error
-State flow
-
-For game search:
-
+- releases
+- loading
+- error
+- aiSummary
+- aiLoading
+- aiError
+Game search state flow
 search
   ↓
-useEffect
+useEffect([search])
   ↓
 Fetch API
   ↓
-setGames
+setGames()
   ↓
 React re-render
   ↓
 Game list
-
-For releases:
-
+Release state flow
 URL id
   ↓
-useParams
+useParams()
   ↓
 useEffect([id])
   ↓
 Fetch API
   ↓
-setReleases
+setReleases()
   ↓
 React re-render
   ↓
 Release list
+AI summary state flow
+Button click
+  ↓
+setAiLoading(true)
+  ↓
+POST /games/:id/ai-summary
+  ↓
+setAiSummary(data.summary)
+  ↓
+React re-render
+  ↓
+Structured AI summary displayed
 7. Frontend API Communication
-
 The frontend communicates with the backend using the browser's native fetch() API.
-
+The backend URL is configured from:
+VITE_API_URL
+with http://localhost:3000 as the default.
 Game retrieval
-
 When there is no search term:
-
 GET /games
-
 When a search term is entered:
-
 GET /games?search={searchTerm}
-
-The search term is passed through:
-
-encodeURIComponent(search)
-
-before being included in the URL.
-
+The search term is encoded with encodeURIComponent() before being included in the URL.
 Release retrieval
-
 When a game is selected:
-
 GET /games/:id/releases
-
-The game ID comes from the current route using useParams().
-
+The game ID is read from the current route using useParams().
+AI summary request
+When the user selects the AI summary button:
+POST /games/:id/ai-summary
+The request does not require a request body. The game ID is supplied as a route parameter.
 8. Frontend Loading and Error Handling
-
-The current implementation includes explicit loading and error handling.
-
-Before requests, loading is enabled.
-
-The frontend checks:
-
-response.ok
-
-If the response is unsuccessful, an error is thrown.
-
-The error is then handled using .catch() and stored in React state.
-
-Finally, .finally() is used to stop the loading state.
-
-The UI can therefore communicate:
-
-Loading games...
-
-or:
-
-Error: ...
-
-and similarly for release retrieval.
-
-This is an update from the older HLD, which described frontend loading/error handling as limited. The current implementation now has explicit loading/error state handling.
-
+The frontend provides explicit loading and error state handling for games, releases, and AI summary generation.
+Before requests, the relevant loading state is enabled. After receiving a response, the code checks response.ok. Failed responses are converted into JavaScript errors and handled in .catch() or try/catch blocks.
+The request completion path uses .finally() to stop loading states.
+The UI can therefore display states such as:
+- Loading games...
+- Loading releases...
+- Generating AI Summary...
+- Error: ...
+AI summary generation uses async/await and has its own loading and error state so it does not overwrite the release-loading state.
 9. Backend Layer
-
 The backend is implemented using Node.js and Express 5.
-
 The main backend file is:
-
 backend/server.js
-
 The backend is responsible for:
-
-receiving HTTP requests
-processing route parameters and query parameters
-executing SQL queries
-communicating with PostgreSQL
-returning JSON responses
-handling database errors
-configuring CORS
-
-The backend acts as the intermediary between the React frontend and PostgreSQL.
-
-The HLD's description of the backend's intermediary role remains consistent with the architecture.
-
-10. Database Connection
-
-The PostgreSQL connection is handled through:
-
+- receiving HTTP requests
+- processing route parameters and query parameters
+- validating integer game IDs where required
+- executing PostgreSQL queries
+- communicating with MongoDB
+- generating AI summaries through Gemini
+- returning JSON responses
+- handling route/database/integration errors
+- configuring CORS and JSON middleware
+The backend is the central application layer between the frontend, both databases, and the external Gemini service.
+10. Database Connections
+PostgreSQL
+PostgreSQL connectivity is handled in:
 backend/db.js
-
-The application uses the pg package and a PostgreSQL Pool.
-
-Environment variables are used for database configuration through dotenv.
-
-The architecture is therefore:
-
+The application uses pg.Pool, configured through environment variables:
+- DB_USER
+- DB_HOST
+- DB_NAME
+- DB_PASSWORD
+- DB_PORT
+The high-level access path is:
 Express route
       ↓
 pool.query()
@@ -276,119 +228,134 @@ PostgreSQL
       ↓
 result.rows
       ↓
-Express response
-
-The frontend never receives or uses the database credentials directly.
-
+Express response / application processing
+MongoDB
+MongoDB connectivity is handled in:
+backend/mongo.js
+The application connects using MONGODB_URI and uses the game_release_database database and game_metadata collection.
+At startup, the backend connects to MongoDB before beginning to listen for requests. The MongoDB setup also applies the collection validator and creates a unique index on gameId.
+The logical MongoDB relationship is:
+PostgreSQL games.id  ────────  MongoDB game_metadata.gameId
+The relationship is application-level rather than a database foreign key because the data is stored in two different database systems.
 11. CORS Architecture
-
-The frontend and backend run on different local origins during development:
-
-Frontend → http://localhost:5173
-Backend  → http://localhost:3000
-
-The backend uses CORS middleware:
-
-app.use(
-  cors({
-    origin: "http://localhost:5173"
-  })
-);
-
-This explicitly allows the frontend development origin to communicate with the API through the browser.
-
-The current implementation therefore uses a restricted origin, rather than unrestricted cors().
-
-This configuration is intended for the current local development environment.
-
+The backend enables CORS using the configured frontend URL:
+FRONTEND_URL
+If the variable is not provided, the application defaults to:
+http://localhost:5173
+The effective configuration is conceptually:
+frontend origin
+      ↓
+FRONTEND_URL
+      ↓
+Express CORS middleware
+      ↓
+API requests accepted only from the configured origin
+This is more restrictive than enabling unrestricted CORS and supports separate frontend/backend origins during development and deployment.
 12. API Layer
-
 The backend exposes the following endpoints:
+Method	Endpoint	Purpose	Data store / service
+GET	/	API status	Backend
+GET	/games	Retrieve all games	PostgreSQL
+GET	/games?search={term}	Search games by title	PostgreSQL
+GET	/games/:id/releases	Retrieve releases for a game	PostgreSQL
+POST	/games/:id/ai-summary	Generate and persist an AI release summary	MongoDB + PostgreSQL + Gemini
+POST	/games/:id/metadata	Create game metadata	MongoDB
+GET	/games/:id/metadata	Retrieve game metadata	MongoDB
+PUT	/games/:id/metadata	Update game metadata	MongoDB
+DELETE	/games/:id/metadata	Delete game metadata	MongoDB
 
-Method	Endpoint	Purpose
-GET	/	API status
-GET	/games	Retrieve all games
-GET	/games?search={term}	Search games
-GET	/games/:id/releases	Retrieve releases for a game
 
-The API acts as the boundary between the frontend and database.
-
-The frontend therefore does not need to know how PostgreSQL tables or SQL queries are structured.
-
+The API is the boundary between the frontend and backend data/services. The frontend does not need to know the underlying PostgreSQL queries or MongoDB document operations.
 13. Game Retrieval
-
-The:
-
-GET /games
-
-endpoint retrieves games from PostgreSQL.
-
-Without a search term, games are ordered alphabetically.
-
+The GET /games endpoint retrieves games from PostgreSQL.
+Without a search term, the query returns all rows from games ordered by title ascending.
 With a search term, PostgreSQL performs a case-insensitive partial title search using:
-
 WHERE title ILIKE $1
-
 with the parameter:
-
 %search%
-
-The query is parameterized to protect against SQL injection.
-
-The results are returned as JSON.
-
+The query is parameterized, which helps prevent SQL injection.
+The resulting rows are returned as JSON.
 14. Release Retrieval
-
-The:
-
-GET /games/:id/releases
-
-endpoint retrieves releases associated with a particular game.
-
+The GET /games/:id/releases endpoint retrieves release records for a game.
 The backend:
-
-extracts the ID from req.params
-executes a parameterized SQL query
-joins the relevant database tables
-filters by game_id
-orders the releases chronologically
-returns the rows as JSON
-
+1. reads the route parameter from req.params.id
+2. executes a parameterized SQL query
+3. joins releases with games, platforms, and regions
+4. filters records by r.game_id
+5. orders releases by r.release_date ASC
+6. returns the result rows as JSON
+The response contains the game title, release ID, platform, region, release format, release date, and notes.
 The endpoint represents the relationship:
-
 Game
   ↓
 Releases
-
-A game can therefore have multiple release records.
-
-15. Database Layer
-
-PostgreSQL is the persistent data layer.
-
-The database contains four primary tables:
-
-games
-platforms
-regions
-releases
-
-The database represents the relationship between a game and its different releases.
-
-A release is associated with:
-
-one game
-one platform
-one region
-one release format
-one release date
-
-This structure allows the same game to have multiple release records without duplicating the game's basic information. The existing HLD also describes this as the primary database relationship.
-
-16. Database Relationships
-
-The high-level relationship is:
-
+A game can therefore have multiple release records across platforms and regions.
+15. Metadata Layer
+Supplementary game metadata is stored in MongoDB in the game_metadata collection.
+The metadata document includes required fields for:
+- gameId
+- title
+- developer
+- publisher
+- genres
+- aliases
+- notes
+- sources
+- updatedAt
+The sources field contains structured source objects with name, url, and note.
+MongoDB validation is configured with a strict $jsonSchema validator and validationAction: "error".
+A unique index on gameId prevents multiple metadata documents from representing the same game.
+The metadata API validates that the route ID is an integer. The create endpoint also handles duplicate-key errors and returns HTTP 409 when metadata already exists for the game.
+16. AI Release Summary Architecture
+The AI release summary feature integrates MongoDB, PostgreSQL, and Gemini in a single backend workflow.
+The endpoint is:
+POST /games/:id/ai-summary
+The high-level flow is:
+Frontend
+   ↓
+POST /games/:id/ai-summary
+   ↓
+Validate integer game ID
+   ↓
+MongoDB: find metadata by gameId
+   ↓
+PostgreSQL: query release data with JOINs
+   ↓
+Build Gemini prompt from supplied release data
+   ↓
+Gemini API: generate structured JSON
+   ↓
+MongoDB: update aiSummary + updatedAt
+   ↓
+Backend returns { gameId, title, summary }
+   ↓
+Frontend displays structured summary
+The route first verifies that game metadata exists in MongoDB. It then queries PostgreSQL for the game's release data. If no release rows are found, the endpoint returns a 404 response.
+The release records passed to Gemini contain the platform, region, release format, release date, and notes. The prompt explicitly instructs Gemini to use only the supplied release data and not invent or assume additional facts.
+The Gemini request uses structured output with application/json and a response schema containing six required fields:
+- summary
+- releaseCount
+- platforms
+- regions
+- releaseFormats
+- notablePatterns
+The generated structured object is stored in MongoDB as aiSummary and the updatedAt field is refreshed.
+The frontend displays all six fields from the returned structured summary.
+17. Database Layer
+The system uses a polyglot persistence approach:
+PostgreSQL
+PostgreSQL stores the normalized relational release model:
+- games
+- platforms
+- regions
+- releases
+MongoDB
+MongoDB stores document-oriented supplementary information:
+- game_metadata
+- aiSummary inside the metadata document when an AI summary has been generated
+The two databases are complementary rather than redundant. PostgreSQL provides the structured release model and relationships, while MongoDB provides flexible metadata and persisted AI output.
+18. Database Relationships
+The PostgreSQL relationship model is:
               ┌─────────────┐
               │    games    │
               └──────┬──────┘
@@ -405,15 +372,18 @@ The high-level relationship is:
         ┌────────▼─┐  ┌─▼─────────┐
         │platforms │  │  regions  │
         └──────────┘  └───────────┘
-
-The database uses foreign keys to maintain these relationships.
-
-This enables the system to represent releases across different combinations of platforms and regions.
-
-17. End-to-End Game Search Flow
-
+Foreign keys in releases maintain these relationships:
+- game_id → games.id
+- platform_id → platforms.id
+- region_id → regions.id
+The MongoDB relationship is logical rather than relational:
+PostgreSQL games.id
+        │
+        │ same game identifier
+        ▼
+MongoDB game_metadata.gameId
+19. End-to-End Game Search Flow
 When a user searches for a game:
-
 1. User enters search term
           ↓
 2. React updates search state
@@ -426,7 +396,7 @@ When a user searches for a game:
           ↓
 6. Backend reads req.query.search
           ↓
-7. PostgreSQL executes parameterized query
+7. PostgreSQL executes parameterized ILIKE query
           ↓
 8. PostgreSQL returns matching games
           ↓
@@ -436,11 +406,9 @@ When a user searches for a game:
           ↓
 11. setGames(data)
           ↓
-12. React re-renders game list
-18. End-to-End Release Flow
-
+12. React re-renders the game list
+20. End-to-End Release Flow
 When a user selects a game:
-
 1. User clicks a game
           ↓
 2. navigate(`/games/${game.id}`)
@@ -470,129 +438,88 @@ When a user selects a game:
 14. React re-renders
           ↓
 15. releases.map() displays releases
-19. Error Handling Architecture
-
-The system handles errors at both backend and frontend levels.
-
+21. Error Handling Architecture
+Errors are handled at both backend and frontend levels.
 Backend
-
-Database operations are inside try/catch.
-
-If a database query fails:
-
-Database error
-      ↓
-catch
-      ↓
-console.error(error)
-      ↓
-HTTP 500
-      ↓
-{ error: "Database query failed" }
+Database, MongoDB, and Gemini operations are wrapped in try/catch blocks in the routes that use them.
+Typical backend outcomes include:
+- HTTP 400 for invalid game IDs on routes that validate the ID
+- HTTP 404 when required game metadata or release data is not found
+- HTTP 409 when duplicate metadata is created for an existing gameId
+- HTTP 500 for database, integration, or other server-side failures
+Errors are logged with console.error() and a user-facing JSON error message is returned.
 Frontend
-
-The frontend checks:
-
-response.ok
-
-and throws an error when the response is unsuccessful.
-
-The .catch() handler stores the error in React state.
-
-The UI then displays an error message.
-
-This provides a complete basic error path from database failure to user-facing feedback.
-
-20. Security Architecture
-
-The current system includes several basic security measures.
-
+The frontend checks response.ok for API requests. Unsuccessful responses are converted into errors and shown through component state.
+The AI feature maintains separate aiLoading and aiError state so AI failures do not replace the release data already displayed on the page.
+22. Security Architecture
+The current system implements several basic security controls.
 Backend/database separation
-
-The frontend does not directly access PostgreSQL.
-
-Parameterized queries
-
-User-provided search values and game IDs are passed to PostgreSQL using parameters.
-
-This helps prevent SQL injection.
-
+The frontend does not directly connect to PostgreSQL or MongoDB. Database credentials remain on the backend.
+Parameterized SQL queries
+Search terms and database identifiers used in SQL queries are supplied as parameters rather than concatenated directly into SQL statements. This helps prevent SQL injection.
 Restricted CORS
-
-The backend currently allows the configured frontend origin:
-
-http://localhost:5173
+CORS is limited to the configured FRONTEND_URL, defaulting to http://localhost:5173.
 Environment variables
-
-Database configuration is provided through environment variables rather than being hard-coded into the application.
-
-21. Responsive Design
-
+Database credentials, MongoDB URI, Gemini API key, frontend URL, and server port are configured through environment variables rather than embedded in application source code.
+MongoDB schema validation
+The game_metadata collection uses a strict JSON Schema validator, reducing the risk of storing malformed metadata documents.
+Input validation
+The metadata and AI-summary routes validate that the supplied game ID is an integer before continuing.
+23. Responsive Design
 The frontend uses CSS media queries to adapt the layout for smaller screens.
-
 The main responsive breakpoint currently used is:
-
 @media (max-width: 1024px)
-
-At this breakpoint, the system adjusts several parts of the layout.
-
-#center
-
-The padding and gap are reduced:
-
-padding: 32px 20px 24px
-gap: 18px
-
-This prevents the content from becoming cramped on smaller screens.
-
-Hero
-
-The hero graphics are reduced in width, height, position, and transform scale.
-
-#next-steps
-
-The layout changes from a row to a column.
-
-#docs
-
-The border layout changes to better fit the smaller viewport.
-
-Links
-
-Links are allowed to wrap.
-
-This responsive approach allows the existing desktop composition to adapt to smaller screens without introducing a separate mobile application.
-
-22. Development Environment
-
-During development, the three major parts run separately:
-
+At this breakpoint, the application reduces spacing and graphical dimensions and changes selected layouts from rows to columns. Links are also allowed to wrap where required.
+This allows the existing web interface to adapt to smaller viewports without requiring a separate mobile application.
+24. Containerized Deployment Architecture
+The repository includes a Docker Compose configuration with three containers:
+┌──────────────────────────────┐
+│ Frontend container           │
+│ Vite build → Nginx           │
+│ Host: 5173 → Container: 80   │
+└───────────────┬──────────────┘
+                │ HTTP
+                ▼
+┌──────────────────────────────┐
+│ Backend container            │
+│ Node.js + Express            │
+│ Host: 3000 → Container: 3000 │
+└───────────────┬──────────────┘
+                │
+        ┌───────┴────────┐
+        │                │
+      SQL            MongoDB URI
+        │                │
+        ▼                ▼
+┌──────────────┐  ┌──────────────────┐
+│ PostgreSQL   │  │ External MongoDB  │
+│ container    │  │ configured via    │
+│ port 5432    │  │ MONGODB_URI       │
+└──────────────┘  └──────────────────┘
+The Docker Compose file explicitly defines PostgreSQL, backend, and frontend services.
+The PostgreSQL container uses the schema.sql and seed.sql files as initialization scripts and persists database data through the postgres_data named volume.
+The backend container runs the Node.js API on port 3000. The frontend uses a multi-stage Docker build: Vite creates the production bundle and Nginx serves the resulting static files.
+The Compose configuration uses depends_on to establish service startup ordering between PostgreSQL and the backend, and between the backend and frontend. This establishes startup order but does not itself provide a database health check.
+25. Development Environment
+The application can be developed without containers using separate frontend and backend processes:
 React/Vite Development Server
         │
-        │ HTTP
+        │ HTTP / JSON
         ▼
-Node.js/Express Server
+Node.js / Express Server
         │
-        │ SQL
-        ▼
-PostgreSQL
-
-The frontend runs on:
-
-localhost:5173
-
-The backend runs on:
-
-localhost:3000
-
-PostgreSQL runs separately and is accessed by the backend.
-
-23. Git Development Workflow
-
+        ├──────────── SQL ───────────► PostgreSQL
+        │
+        └──────────── Documents ─────► MongoDB
+                         
+                         Gemini API
+The default local frontend and backend addresses are:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3000
+PostgreSQL is accessed by the backend using the configured database environment variables. MongoDB and Gemini are also accessed from the backend using their respective environment variables.
+26. Git Development Workflow
 The project is developed using feature branches and pull requests.
-
 The general workflow is:
-
 main
   ↓
 feature branch
@@ -603,164 +530,95 @@ commit
   ↓
 Pull Request
   ↓
-review/diff
+review / diff
   ↓
 merge into main
-
-Recent feature commits include:
-
-a53a86e
-feat: add responsive styles to hero section
-3ada0f7
-feat: add loading and error states
-c1c55ea
-feat: configure restricted cors origin
-
 This workflow provides isolated feature development and a traceable project history.
-
-24. Scalability Considerations
-
-The current architecture is intentionally simple because the application is an MVP.
-
-The existing architecture can be extended if the dataset or user base grows.
-
-Potential improvements include:
-
-database indexes for frequently searched fields
-pagination
-improved search functionality
-caching
-more granular React components
-additional backend service layers
-production deployment
-larger-scale database optimization
-
-These are future improvements, not currently implemented features. The existing HLD similarly identifies indexes, pagination, caching, and additional backend layers as future scalability options.
-
-25. Current System Limitations
-
-The current MVP does not implement:
-
-user accounts
-authentication
-authorization
-user collections
-advanced filtering
-price tracking
-community contributions
-automated data ingestion
-production deployment
-large-scale optimization
-game/remake/remaster relationship management
-
-Search is currently focused on game titles.
-
-Release data is maintained through the database's current seed/data workflow.
-
-26. Future Architecture
-
-The existing three-layer architecture provides a foundation for future features.
-
-Potential additions include:
-
-Advanced Search
-      ↓
-Game Relationships
-      ↓
-User Accounts
-      ↓
-User Collections
-      ↓
-Community Contributions
-      ↓
-Release Sources
-      ↓
-Automated Data Ingestion
-      ↓
-Production Deployment
-
-These additions can be introduced without fundamentally changing the core:
-
-React
-  ↓
-Express API
-  ↓
-PostgreSQL
-
-architecture.
-
-27. Design Principles
-Separation of Concerns
-
-Each layer has a distinct responsibility:
-
-Frontend → UI and interaction
-Backend  → API and application logic
-Database → persistent data
-Simplicity
-
-The architecture avoids unnecessary services and technologies because the current goal is an MVP.
-
-Maintainability
-
-Separating the layers allows individual parts of the application to be modified without requiring the entire system to be redesigned.
-
-Security
-
-Database access is isolated behind the backend and user input is passed through parameterized queries.
-
-Extensibility
-
-The current API and relational database provide a foundation for additional functionality.
-
+27. Scalability and Current Limitations
+The current architecture is intentionally simple but includes clear extension points.
+Potential future scalability improvements include:
+- indexes for frequently searched fields
+- pagination for large result sets
+- improved search and filtering
+- caching where appropriate
+- more granular frontend components
+- additional backend service/repository layers
+- asynchronous/background AI processing for larger workloads
+- production-grade observability and monitoring
+- larger-scale database optimization
+Current application limitations include:
+- no user accounts
+- no authentication or authorization
+- no user collections
+- no advanced filtering UI
+- no price tracking
+- no community contributions
+- no automated data ingestion
+- no dedicated mobile application
+- the current frontend focuses on title search, release viewing, and AI summary generation
+- metadata CRUD is exposed through backend API endpoints but is not represented as a frontend management interface
+- the Docker Compose setup is suitable for local/containerized deployment; production hosting configuration is not defined in the repository
+The GET /games/:id/releases route currently passes the raw route parameter to PostgreSQL rather than applying the integer validation used by the metadata and AI-summary routes.
 28. Architecture Summary
-
-The Game Release Database currently uses a three-layer architecture:
-
-┌─────────────────────────────┐
-│          FRONTEND           │
-│                             │
-│ React 19                    │
-│ Vite                        │
-│ React Router DOM            │
-│ Fetch API                   │
-│ CSS                         │
-│                             │
-│ App                         │
-│ GameDetails                 │
-└──────────────┬──────────────┘
-               │
-               │ HTTP / JSON
-               ▼
-┌─────────────────────────────┐
-│           BACKEND           │
-│                             │
-│ Node.js                     │
-│ Express 5                   │
-│ CORS                        │
-│ pg Pool                     │
-│                             │
-│ GET /                       │
-│ GET /games                  │
-│ GET /games?search=...       │
-│ GET /games/:id/releases     │
-└──────────────┬──────────────┘
-               │
-               │ SQL
-               ▼
-┌─────────────────────────────┐
-│          DATABASE           │
-│                             │
-│ PostgreSQL                  │
-│                             │
-│ games                       │
-│ platforms                   │
-│ regions                     │
-│ releases                    │
-└─────────────────────────────┘
-
-The complete application flow is:
-
-User → React → Fetch → Express → PostgreSQL → Express → JSON → React → UI
-
-The architecture is intentionally simple and appropriate for the current MVP while providing a foundation for future search, user, data-management, and deployment features.
+The current Game Release Database uses a React frontend, an Express backend, PostgreSQL for structured release data, MongoDB for supplementary metadata and persisted AI summaries, and Gemini for on-demand release analysis.
+┌────────────────────────────────────────┐
+│                FRONTEND                │
+│                                        │
+│ React 19                               │
+│ Vite                                   │
+│ React Router DOM                       │
+│ Fetch API                              │
+│ CSS                                    │
+│                                        │
+│ App                                    │
+│ GameDetails                            │
+└──────────────────┬─────────────────────┘
+                   │ HTTP / JSON
+                   ▼
+┌────────────────────────────────────────┐
+│                BACKEND                 │
+│                                        │
+│ Node.js                                │
+│ Express 5                              │
+│ CORS + JSON middleware                 │
+│ PostgreSQL pg Pool                     │
+│ MongoDB driver                          │
+│ Gemini integration                     │
+│                                        │
+│ /                                     │
+│ /games                                 │
+│ /games/:id/releases                    │
+│ /games/:id/ai-summary                  │
+│ /games/:id/metadata (CRUD)             │
+└───────────────┬─────────────┬──────────┘
+                │             │
+              SQL        Documents
+                │             │
+                ▼             ▼
+        ┌──────────────┐  ┌────────────────┐
+        │ PostgreSQL   │  │ MongoDB        │
+        │              │  │                │
+        │ games        │  │ game_metadata  │
+        │ platforms    │  │ + aiSummary    │
+        │ regions      │  │                │
+        │ releases     │  │                │
+        └──────────────┘  └────────────────┘
+                
+                      API call
+                         │
+                         ▼
+                ┌──────────────────┐
+                │ Gemini API       │
+                │ structured JSON  │
+                └──────────────────┘
+The main application flows are:
+User
+  → React
+  → Fetch
+  → Express
+  → PostgreSQL / MongoDB / Gemini
+  → Express
+  → JSON
+  → React
+  → UI
+This architecture matches the current implementation and provides a clean foundation for extending search, metadata management, AI capabilities, and future user-facing features.
