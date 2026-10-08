@@ -1,60 +1,82 @@
-MVP
+Minimum Viable Product (MVP):
 
-1. Game Search
+The current MVP focuses on the core functionality required to search for games, view release information, manage supplementary game metadata, and generate an AI-based release summary.
 
-Users can search for a game by title.
+1. Game Search:
 
-2. Game Details
+Users can search for games by title.
 
-Users can view basic information about a game.
+- Search is case-insensitive.
+- Partial title matches are supported.
+- Games are returned alphabetically by title when no search term is supplied.
 
-3. Release Information
+2. Game Release Details:
 
-Users can see whether the game received:
+Users can select a game and view its release records.
+Each release record can contain:
 
-Physical release
-Digital release
+- Platform
+- Region
+- Release format
+- Release date
+- Release notes
 
-4. Platform & Region
+Release data is retrieved from PostgreSQL through the backend API.
 
-Users can see where those releases happened.
+3. Game Metadata:
 
-Example:
+The backend supports storing supplementary metadata for each game in MongoDB.
 
-Game: Example Game
+Metadata includes:
 
+- Title
+- Developer
+- Publisher
+- Genres
+- Aliases
+- Notes
+- Sources
 
-Platform: PS3
-Region: North America
-Physical: ✓
-Digital: ✓
+Metadata can be created, retrieved, updated, and deleted through the metadata API.
 
+4. AI Release Summary:
 
-Platform: PSP
-Region: Europe
-Physical: ✗
-Digital: ✓
+Users can request an AI-generated summary of a game's release history.
 
-5. Filters
+The backend:
 
-Users can filter games/release information by:
+1. Validates the game ID.
+2. Retrieves the game's metadata from MongoDB.
+3. Retrieves the game's release records from PostgreSQL.
+4. Sends the supplied release data to the Google Gemini API.
+5. Receives a structured summary.
+6. Stores the generated summary back in MongoDB.
+7. Returns the summary to the frontend.
 
-Platform
-Region
-Physical/Digital
+The structured AI response contains:
 
-6. Admin Data Management
+- Summary
+- Release count
+- Platforms
+- Regions
+- Release formats
+- Notable patterns
 
-You can add/edit/delete release information.
+5. Current MVP Scope:
 
-NOT NOW:
-❌ User accounts
+The current implementation provides the core search and release-viewing experience through the React frontend, with metadata management and AI-summary functionality exposed through the backend API.
+
+Not Currently Implemented:
+
+❌ Platform filters
+❌ Region filters
+❌ Release-format filters
+❌ Create/edit/delete release records
+❌ User accounts and authentication
 ❌ Collection tracking
 ❌ Wishlist
 ❌ Price tracking
 ❌ Community submissions
 ❌ Comments/reviews
-❌ Mobile app
-❌ Public API
-❌ AI features
+❌ Dedicated mobile application
 ❌ Automated data collection
