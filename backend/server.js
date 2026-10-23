@@ -72,7 +72,8 @@ app.get("/games/:id/releases", async (req, res) => {
                 reg.name AS region,
                 r.release_format,
                 r.release_date,
-                r.notes
+                r.notes,
+                r.cover_image
             FROM releases r
             JOIN games g ON r.game_id = g.id
             JOIN platforms p ON r.platform_id = p.id
