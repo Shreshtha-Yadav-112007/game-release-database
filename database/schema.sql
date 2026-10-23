@@ -23,5 +23,6 @@ CREATE TABLE releases (
     region_id INTEGER NOT NULL REFERENCES regions(id),
     release_format VARCHAR(20) NOT NULL,
     release_date DATE,
+    cover_image TEXT,
     notes TEXT
 );
